@@ -2,27 +2,71 @@
 require('dotenv').config(); // .env 파일에서 환경 변수 로드 (Load environment variables from .env file)
 const express = require('express'); // Express 모듈 가져오기 (Import Express module)
 const path = require('path'); // 경로 관련 모듈 (Module for handling file and directory paths)
-const mysql = require('mysql'); // MySQL 모듈 (Import MySQL module)
+const mysql = require('mysql2'); // MySQL 모듈 (Import MySQL module)
 const indexRouter = require('./routes/index'); // 라우터 모듈 (Import router module)
 
 const app = express(); // Express 애플리케이션 생성 (Create Express application)
 
 // 2. MySQL 데이터베이스 연결 설정 (Configure MySQL database connection)
+// MySQL 데이터베이스 연결 설정 (Configure MySQL database connection)
 const db = mysql.createConnection({
-    host: '192.168.0.17', // MySQL 호스트 (MySQL host)
-    user: 'morningbread', // 사용자 이름 (Username)
-    password: '0510wlstn', // 비밀번호 (Password)
-    database: 'dux' // 사용할 데이터베이스 (Database to use)
+    host: process.env.DB_HOST, // 환경 변수에서 호스트 가져오기 (Get host from environment variables)
+    user: process.env.DB_USER, // 환경 변수에서 사용자 이름 가져오기 (Get username from environment variables)
+    password: process.env.DB_PASSWORD, // 환경 변수에서 비밀번호 가져오기 (Get password from environment variables)
+    database: process.env.DB_NAME // 환경 변수에서 데이터베이스 이름 가져오기 (Get database name from environment variables)
 });
 
-// 3. 데이터베이스 연결 (Connect to the database)
-db.connect((err) => {
-    if (err) {
-        console.error('데이터베이스 연결 실패:', err); // 데이터베이스 연결 실패 메시지 (Database connection failed message)
-        return;
-    }
-    console.log('데이터베이스에 연결되었습니다.'); // 데이터베이스 연결 성공 메시지 (Database connected successfully message)
-});
+// 3. 데이터베이스 연결 및 테이블 생성 (Connect to the database and create tables)
+const connectToDatabase = () => {
+    db.connect((err) => {
+        if (err) {
+            console.error('데이터베이스 연결 실패:', err);
+            process.exit(1); // 서버 종료
+        }
+        console.log('데이터베이스에 연결되었습니다.');
+
+        // 테이블 생성 (Create tables)
+        createTables();
+    });
+};
+
+const createTables = () => {
+    const createUserTableQuery = `
+        CREATE TABLE IF NOT EXISTS dux_user_info (
+            user_id VARCHAR(100) NOT NULL,
+            user_pw VARCHAR(100) NOT NULL,
+            PRIMARY KEY (user_id)
+        );
+    `;
+
+    const createRegisteredInfoTableQuery = `
+        CREATE TABLE IF NOT EXISTS registered_info (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(999),
+            detail VARCHAR(999),
+            info VARCHAR(999)
+        );
+    `;
+
+    // 테이블 생성 (Create tables)
+    db.query(createUserTableQuery, (err, results) => {
+        if (err) {
+            console.error('dux_user_info 테이블 생성 실패:', err);
+            return;
+        }
+        console.log('dux_user_info 테이블이 성공적으로 생성되었습니다:', results);
+    });
+
+    db.query(createRegisteredInfoTableQuery, (err, results) => {
+        if (err) {
+            console.error('registered_info 테이블 생성 실패:', err);
+            return;
+        }
+        console.log('registered_info 테이블이 성공적으로 생성되었습니다:', results);
+    });
+};
+
+connectToDatabase(); // 데이터베이스 연결 및 테이블 생성 호출
 
 // 4. Body-parser 설정 (Configure body-parser)
 app.use(express.json()); // JSON 요청 파싱 (Parse JSON requests)
@@ -57,7 +101,6 @@ app.get('/search', async (req, res) => {
 
         console.log(`Received search query: ${query}`);
 
-        // display 파라미터를 10으로 설정하여 최대 10개의 결과 요청 (Set display parameter to 10 to request up to 10 results)
         const response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=10`, {
             headers: {
                 'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
@@ -81,7 +124,7 @@ app.get('/search', async (req, res) => {
 });
 
 // 11. 서버 시작 (Start the server)
-const PORT = process.env.PORT || 3001; // 포트 설정 (Set port)
+const PORT = process.env.PORT || 3000; // 포트 설정 (Set port)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`); // 서버 시작 메시지 (Server start message)
 });
