@@ -124,7 +124,7 @@ app.get('/search', async (req, res) => {
 });
 
 // 11. 서버 시작 (Start the server)
-const PORT = process.env.PORT || 3000; // 포트 설정 (Set port)
+const PORT = process.env.PORT || 4897; // 포트 설정 (Set port)
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`); // 서버 시작 메시지 (Server start message)
 });
